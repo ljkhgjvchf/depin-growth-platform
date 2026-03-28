@@ -1,11 +1,20 @@
-export default function Home() {
+import { defaultClientConfig } from "@/config/client";
+import { Hero } from "@/components/landing/Hero";
+import { Features } from "@/components/landing/Features";
+import { Metrics } from "@/components/landing/Metrics";
+import { CTA } from "@/components/landing/CTA";
+import { Footer } from "@/components/landing/Footer";
+
+export default function CampaignPage() {
+  const config = defaultClientConfig;
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-4xl font-bold">DePIN Growth Platform</h1>
-      <p className="mt-4 text-lg text-gray-500">
-        Growth infrastructure for DePIN companies — landing pages, analytics
-        dashboards, and social automation pipelines.
-      </p>
+    <main className="min-h-screen bg-[var(--brand-bg)] text-[var(--brand-text)]">
+      <Hero config={config.hero} brandName={config.name} />
+      <Metrics items={config.metrics} />
+      <Features items={config.features} />
+      <CTA config={config.cta} />
+      <Footer config={config.footer} brandName={config.name} />
     </main>
   );
 }
