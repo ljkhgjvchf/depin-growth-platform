@@ -21,20 +21,13 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
-      - name: Fix broken env var (remove secret ref, set plain value)
-        run: |
-          vercel env rm NEXT_PUBLIC_APP_ENV production --yes 2>/dev/null || true
-          vercel env rm NEXT_PUBLIC_APP_ENV preview --yes 2>/dev/null || true
-          vercel env rm NEXT_PUBLIC_APP_ENV development --yes 2>/dev/null || true
-          echo "production" | vercel env add NEXT_PUBLIC_APP_ENV production --yes
-          echo "staging"    | vercel env add NEXT_PUBLIC_APP_ENV preview --yes
-          echo "development" | vercel env add NEXT_PUBLIC_APP_ENV development --yes
-
       - name: Deploy to production
         id: deploy
         run: |
-          url=$(vercel deploy --prod --yes 2>&1 | tail -1)
+          output=$(vercel deploy --prod --yes 2>&1)
+          url=$(echo "$output" | grep -E "^https://" | tail -1)
           echo "production_url=$url" >> "$GITHUB_OUTPUT"
-          echo "### Production deployment" >> "$GITHUB_STEP_SUMMARY"
-          echo "URL: $url" >> "$GITHUB_STEP_SUMMARY"
-          echo "Deployed to: $url"
+          echo "### Deployment complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "Live URL: $url" >> "$GITHUB_STEP_SUMMARY"
+          echo "Full output:"
+          echo "$output"
