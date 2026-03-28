@@ -17,7 +17,14 @@ interface AreaChartProps {
   dataKey?: string;
   xKey?: string;
   color?: string;
-  valueFormatter?: (v: number) => string;
+  format?: "compact" | "currency" | "number";
+  currencySymbol?: string;
+}
+
+function formatCompact(n: number, prefix = ""): string {
+  if (n >= 1_000_000) return `${prefix}${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${prefix}${(n / 1_000).toFixed(1)}K`;
+  return `${prefix}${n.toLocaleString()}`;
 }
 
 export function AreaChart({
@@ -26,7 +33,8 @@ export function AreaChart({
   dataKey = "value",
   xKey = "date",
   color = "#38bdf8",
-  valueFormatter,
+  format = "compact",
+  currencySymbol = "$",
 }: AreaChartProps) {
   const formatTick = (v: string) => {
     const d = new Date(v);
@@ -36,8 +44,11 @@ export function AreaChart({
     return v;
   };
 
-  const formatValue = (v: number) =>
-    valueFormatter ? valueFormatter(v) : v.toLocaleString();
+  const formatValue = (v: number) => {
+    if (format === "currency") return formatCompact(v, currencySymbol);
+    if (format === "number") return v.toLocaleString();
+    return formatCompact(v);
+  };
 
   return (
     <div className="rounded-2xl border border-[var(--brand-surface)] bg-[var(--brand-surface)] p-6">

@@ -69,13 +69,13 @@ export default async function DashboardPage() {
           title="Active Nodes"
           data={data.activeNodes.series}
           color={cfg.primaryColor}
-          valueFormatter={(v) => formatCompact(v)}
+          format="compact"
         />
         <LineChart
           title="Token Holders"
           data={data.tokenHolders.series}
           color={cfg.secondaryColor}
-          valueFormatter={(v) => formatCompact(v)}
+          format="compact"
         />
       </div>
 
@@ -85,13 +85,14 @@ export default async function DashboardPage() {
           title="Network Growth (New Nodes)"
           data={data.networkGrowth.series}
           color={cfg.primaryColor}
-          valueFormatter={(v) => v.toLocaleString()}
+          format="number"
         />
         <AreaChart
           title={`TVL (${currency})`}
           data={data.tvl.series}
           color={cfg.secondaryColor}
-          valueFormatter={(v) => `${currency}${formatCompact(v)}`}
+          format="currency"
+          currencySymbol={currency}
         />
       </div>
 

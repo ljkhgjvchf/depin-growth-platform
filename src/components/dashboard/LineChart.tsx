@@ -17,7 +17,14 @@ interface LineChartProps {
   dataKey?: string;   // column name for Y axis, default "value"
   xKey?: string;      // column name for X axis, default "date"
   color?: string;
-  valueFormatter?: (v: number) => string;
+  format?: "compact" | "currency" | "number";
+  currencySymbol?: string;
+}
+
+function formatCompact(n: number, prefix = ""): string {
+  if (n >= 1_000_000) return `${prefix}${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `${prefix}${(n / 1_000).toFixed(1)}K`;
+  return `${prefix}${n.toLocaleString()}`;
 }
 
 export function LineChart({
@@ -26,11 +33,11 @@ export function LineChart({
   dataKey = "value",
   xKey = "date",
   color = "#6366f1",
-  valueFormatter,
+  format = "compact",
+  currencySymbol = "$",
 }: LineChartProps) {
   const formatTick = (v: string) => {
     if (!v) return "";
-    // Shorten date labels
     const d = new Date(v);
     if (!isNaN(d.getTime())) {
       return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -38,8 +45,11 @@ export function LineChart({
     return v.length > 8 ? v.slice(0, 8) + "…" : v;
   };
 
-  const formatValue = (v: number) =>
-    valueFormatter ? valueFormatter(v) : v.toLocaleString();
+  const formatValue = (v: number) => {
+    if (format === "currency") return formatCompact(v, currencySymbol);
+    if (format === "number") return v.toLocaleString();
+    return formatCompact(v);
+  };
 
   return (
     <div className="rounded-2xl border border-[var(--brand-surface)] bg-[var(--brand-surface)] p-6">
