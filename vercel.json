@@ -25,7 +25,4 @@
       "destination": "/api/:path*"
     }
   ],
-  "env": {
-    "NEXT_PUBLIC_APP_ENV": "@app_env"
-  }
 }
