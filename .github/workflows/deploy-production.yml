@@ -11,19 +11,30 @@ jobs:
     environment:
       name: production
       url: ${{ steps.deploy.outputs.production_url }}
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
+      - name: Fix broken env var (remove secret ref, set plain value)
+        run: |
+          vercel env rm NEXT_PUBLIC_APP_ENV production --yes 2>/dev/null || true
+          vercel env rm NEXT_PUBLIC_APP_ENV preview --yes 2>/dev/null || true
+          vercel env rm NEXT_PUBLIC_APP_ENV development --yes 2>/dev/null || true
+          echo "production" | vercel env add NEXT_PUBLIC_APP_ENV production --yes
+          echo "staging"    | vercel env add NEXT_PUBLIC_APP_ENV preview --yes
+          echo "development" | vercel env add NEXT_PUBLIC_APP_ENV development --yes
+
       - name: Deploy to production
         id: deploy
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
           url=$(vercel deploy --prod --yes 2>&1 | tail -1)
           echo "production_url=$url" >> "$GITHUB_OUTPUT"
+          echo "### Production deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "URL: $url" >> "$GITHUB_STEP_SUMMARY"
           echo "Deployed to: $url"
