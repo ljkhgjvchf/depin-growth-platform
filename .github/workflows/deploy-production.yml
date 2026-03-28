@@ -29,15 +29,27 @@ jobs:
             Q=""
           fi
           BASE="https://api.vercel.com/v10/projects/$VERCEL_PROJECT_ID"
+
+          echo "=== Current NEXT_PUBLIC_APP_ENV entries ==="
+          curl -s "$BASE/env$Q" -H "Authorization: Bearer $VERCEL_TOKEN" | python3 -c 'import sys,json;[print("  id="+e["id"]+" type="+str(e.get("type"))+" target="+str(e.get("target"))) for e in json.load(sys.stdin).get("envs",[]) if e.get("key")=="NEXT_PUBLIC_APP_ENV"]'
+
+          echo "=== Removing via CLI (handles secret refs) ==="
+          for target in production preview development; do
+            vercel env rm NEXT_PUBLIC_APP_ENV "$target" --yes --token "$VERCEL_TOKEN" 2>&1 || true
+          done
+
+          echo "=== Also removing any remaining entries via REST API ==="
           envs=$(curl -sf "$BASE/env$Q" -H "Authorization: Bearer $VERCEL_TOKEN" || echo '{"envs":[]}')
           echo "$envs" | python3 -c 'import sys,json;[print(e["id"]) for e in json.load(sys.stdin).get("envs",[]) if e.get("key")=="NEXT_PUBLIC_APP_ENV"]' | while IFS= read -r id; do
             [ -z "$id" ] && continue
-            curl -sf -X DELETE "$BASE/env/$id$Q" -H "Authorization: Bearer $VERCEL_TOKEN" > /dev/null && echo "Removed env var id=$id"
+            curl -sf -X DELETE "$BASE/env/$id$Q" -H "Authorization: Bearer $VERCEL_TOKEN" > /dev/null && echo "Removed via API: $id"
           done
+
+          echo "=== Adding plain values ==="
           curl -sf -X POST "$BASE/env$Q" \
             -H "Authorization: Bearer $VERCEL_TOKEN" \
             -H "Content-Type: application/json" \
-            -d '[{"key":"NEXT_PUBLIC_APP_ENV","value":"production","type":"plain","target":["production"]},{"key":"NEXT_PUBLIC_APP_ENV","value":"staging","type":"plain","target":["preview"]},{"key":"NEXT_PUBLIC_APP_ENV","value":"development","type":"plain","target":["development"]}]' > /dev/null
+            -d '[{"key":"NEXT_PUBLIC_APP_ENV","value":"production","type":"plain","target":["production"]},{"key":"NEXT_PUBLIC_APP_ENV","value":"staging","type":"plain","target":["preview"]},{"key":"NEXT_PUBLIC_APP_ENV","value":"development","type":"plain","target":["development"]}]'
           echo "NEXT_PUBLIC_APP_ENV set as plain values for all environments"
 
       - name: Deploy to production
