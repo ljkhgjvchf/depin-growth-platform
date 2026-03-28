@@ -21,47 +21,31 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
-      - name: Fix NEXT_PUBLIC_APP_ENV (remove broken secret ref, set plain values)
+      - name: Fix NEXT_PUBLIC_APP_ENV in Vercel
         run: |
-          # Use teamId param only for team accounts
           if [[ "$VERCEL_ORG_ID" == team_* ]]; then
             Q="?teamId=$VERCEL_ORG_ID"
           else
             Q=""
           fi
           BASE="https://api.vercel.com/v10/projects/$VERCEL_PROJECT_ID"
-
-          # Delete all existing NEXT_PUBLIC_APP_ENV entries (including broken secret refs)
           envs=$(curl -sf "$BASE/env$Q" -H "Authorization: Bearer $VERCEL_TOKEN" || echo '{"envs":[]}')
-          echo "$envs" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-for e in data.get('envs', []):
-    if e.get('key') == 'NEXT_PUBLIC_APP_ENV':
-        print(e['id'])
-" | while IFS= read -r id; do
+          echo "$envs" | python3 -c 'import sys,json;[print(e["id"]) for e in json.load(sys.stdin).get("envs",[]) if e.get("key")=="NEXT_PUBLIC_APP_ENV"]' | while IFS= read -r id; do
             [ -z "$id" ] && continue
-            curl -sf -X DELETE "$BASE/env/$id$Q" -H "Authorization: Bearer $VERCEL_TOKEN" > /dev/null
-            echo "Removed env var id=$id"
+            curl -sf -X DELETE "$BASE/env/$id$Q" -H "Authorization: Bearer $VERCEL_TOKEN" > /dev/null && echo "Removed env var id=$id"
           done
-
-          # Add clean plain-text values for all environments
           curl -sf -X POST "$BASE/env$Q" \
             -H "Authorization: Bearer $VERCEL_TOKEN" \
             -H "Content-Type: application/json" \
-            -d '[
-              {"key":"NEXT_PUBLIC_APP_ENV","value":"production","type":"plain","target":["production"]},
-              {"key":"NEXT_PUBLIC_APP_ENV","value":"staging","type":"plain","target":["preview"]},
-              {"key":"NEXT_PUBLIC_APP_ENV","value":"development","type":"plain","target":["development"]}
-            ]' > /dev/null
+            -d '[{"key":"NEXT_PUBLIC_APP_ENV","value":"production","type":"plain","target":["production"]},{"key":"NEXT_PUBLIC_APP_ENV","value":"staging","type":"plain","target":["preview"]},{"key":"NEXT_PUBLIC_APP_ENV","value":"development","type":"plain","target":["development"]}]' > /dev/null
           echo "NEXT_PUBLIC_APP_ENV set as plain values for all environments"
 
       - name: Deploy to production
         id: deploy
         run: |
-          output=$(vercel deploy --prod --yes 2>&1)
-          url=$(echo "$output" | grep -E "^https://" | tail -1)
+          set -o pipefail
+          vercel deploy --prod --yes 2>&1 | tee /tmp/vercel.log
+          url=$(grep -E "^https://" /tmp/vercel.log | tail -1)
           echo "production_url=$url" >> "$GITHUB_OUTPUT"
           echo "### Deployment complete" >> "$GITHUB_STEP_SUMMARY"
           echo "**Live URL:** $url" >> "$GITHUB_STEP_SUMMARY"
-          echo "$output"
